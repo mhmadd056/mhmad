@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الموردين</title>
+  <style>
+    :root { --ink:#18231f; --muted:#68756e; --line:#dce5df; --paper:#f4f7f2; --green:#176b4b; --green-dark:#173b30; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Tahoma, Segoe UI, sans-serif; background:var(--paper); color:var(--ink); }
+    .app { display:flex; min-height:100vh; }
+    .sidebar { flex:0 0 250px; background:var(--green-dark); color:white; padding:24px 18px; }
+    .brand { font-size:1.35rem; font-weight:bold; margin-bottom:28px; }
+    .nav a { display:block; color:#e5eee8; text-decoration:none; padding:12px 14px; border-radius:8px; margin:7px 0; transition:background .18s ease; }
+    .nav a:hover, .nav a.active { background:#285541; color:white; }
+    .main { flex:1; min-width:0; padding:30px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; background:white; border:1px solid var(--line); border-radius:10px; padding:20px 24px; }
+    .topbar h1 { margin:0; font-size:1.4rem; }
+    .count { padding:9px 12px; border-radius:6px; background:#edf5ee; color:var(--green); white-space:nowrap; }
+    .panel { background:white; border:1px solid var(--line); border-radius:10px; margin-top:20px; overflow:hidden; }
+    .panel-head { padding:18px 22px; border-bottom:1px solid var(--line); }
+    .panel-head h2 { margin:0 0 6px; font-size:1.08rem; }
+    .muted { color:var(--muted); font-size:.9rem; line-height:1.6; }
+    .supplier-form { display:grid; grid-template-columns:repeat(5,minmax(130px,1fr)) auto; gap:14px; padding:22px; align-items:end; }
+    label { display:block; margin-bottom:8px; color:#3f5147; font-size:.9rem; font-weight:bold; }
+    input, select { width:100%; min-height:46px; padding:10px 12px; border:1px solid #cbd7cf; border-radius:6px; background:white; color:var(--ink); font:inherit; }
+    input:focus, select:focus { outline:2px solid #b9d6c1; border-color:var(--green); }
+    .btn { min-height:42px; background:var(--green); color:white; border:none; border-radius:6px; padding:10px 14px; font:inherit; font-weight:bold; cursor:pointer; transition:background .18s ease, transform .18s ease; }
+    .btn:hover { background:#12583d; transform:translateY(-1px); }
+    .btn-secondary { background:#edf2ee; color:#334a3c; }
+    .btn-secondary:hover { background:#dce8df; }
+    .btn-delete { background:#fff0ed; color:#a63b2d; }
+    .btn-delete:hover { background:#ffe0da; }
+    .table-wrap { overflow-x:auto; }
+    table { width:100%; min-width:900px; border-collapse:collapse; }
+    th, td { padding:14px 16px; border-bottom:1px solid #edf1ee; text-align:right; }
+    th { background:#f5f8f5; color:#47594d; font-size:.86rem; }
+    tbody tr:last-child td { border-bottom:0; }
+    tbody tr:hover { background:#f8fbf8; }
+    .actions { display:flex; gap:7px; }
+    .actions .btn { padding:8px 11px; }
+    .empty { padding:32px 20px; text-align:center; color:var(--muted); }
+    .form-message { min-height:1.4em; padding:0 22px 14px; color:#166534; }
+    .debt-summary { display:flex; flex-wrap:wrap; gap:10px; padding:18px 22px 0; }
+    .debt-total { padding:11px 14px; background:#fff7e6; color:#7c4a03; border-radius:6px; font-weight:bold; }
+    .debt-form { display:grid; grid-template-columns:repeat(4,minmax(140px,1fr)) auto; gap:14px; padding:20px 22px; align-items:end; }
+    .debt-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr)); gap:12px; padding:20px 22px; }
+    .debt-card { padding:16px; border:1px solid var(--line); border-right:4px solid #e5a323; border-radius:8px; background:#fff; }
+    .debt-card.overdue { border-right-color:#c24136; }
+    .debt-card.paid { border-right-color:#25804e; }
+    .debt-card h3 { margin:0; font-size:1rem; }
+    .debt-card p { margin:9px 0; color:var(--muted); line-height:1.6; }
+    .debt-balance { color:var(--ink) !important; font-weight:bold; }
+    .debt-actions { display:flex; gap:8px; margin-top:12px; }
+    .debt-empty { grid-column:1 / -1; margin:0; padding:24px; text-align:center; color:var(--muted); background:#f7faf7; border-radius:8px; }
+    @media (max-width:1150px) { .supplier-form { grid-template-columns:repeat(3,minmax(140px,1fr)); } }
+    @media (max-width:700px) {
+      .app { display:block; }
+      .sidebar { width:auto; padding:14px; }
+      .brand { margin-bottom:10px; }
+      .nav { display:flex; gap:5px; overflow-x:auto; }
+      .nav a { white-space:nowrap; margin:0; }
+      .main { padding:16px; }
+      .topbar { align-items:flex-start; flex-direction:row; padding:16px; }
+      .supplier-form { grid-template-columns:repeat(2,minmax(0,1fr)); padding:16px; }
+      .debt-form { grid-template-columns:repeat(2,minmax(0,1fr)); padding:16px; }
+      .panel-head { padding:16px; }
+      .debt-list { padding:16px; }
+      .form-message { padding-inline:16px; }
+    }
+    @media (max-width:480px) {
+      .topbar { align-items:flex-start; flex-direction:column; }
+      .supplier-form { grid-template-columns:1fr; }
+      .debt-form { grid-template-columns:1fr; }
+      .supplier-form .actions { flex-wrap:wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">My Market</div>
+      <nav class="nav">
+        <a href="dashboard.html">🏠 لوحة التحكم</a>
+        <a href="customers.html">👥 العملاء</a>
+        <a href="products.html">📦 المنتجات</a>
+        <a href="suppliers.html" class="active">🚚 الموردين</a>
+        <a href="settings.html">⚙️ الإعدادات</a>
+        <a href="logout.html">🔓 تسجيل الخروج</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <h1>إدارة الموردين</h1>
+        <div class="count"><strong id="supplier-count">0</strong> مورد مسجل</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2 id="form-title">إضافة مورد</h2>
+          <div class="muted">أدخل بيانات المورد والصنف وتكلفة المنتج.</div>
+        </div>
+        <form id="supplier-form" class="supplier-form">
+          <input id="supplier-id" type="hidden">
+          <div>
+            <label for="supplier-name">اسم المورد</label>
+            <input id="supplier-name" required maxlength="80" placeholder="اسم الشركة أو المورد">
+          </div>
+          <div>
+            <label for="supplier-phone">رقم الهاتف</label>
+            <input id="supplier-phone" type="tel" required maxlength="25" placeholder="رقم التواصل">
+          </div>
+          <div>
+            <label for="supplier-product">الصنف الذي يورّده</label>
+            <input id="supplier-product" required maxlength="80" placeholder="مثال: لحوم، خضار">
+          </div>
+          <div>
+            <label for="supplier-cost">تكلفة المنتج (<span id="cost-currency">₪</span>)</label>
+            <input id="supplier-cost" type="number" min="0.01" step="0.01" required placeholder="0.00">
+          </div>
+          <div>
+            <label for="supplier-payment-term">مدة السداد</label>
+            <select id="supplier-payment-term" required>
+              <option value="immediate">عند الاستلام</option>
+              <option value="7">خلال 7 أيام</option>
+              <option value="14">خلال 14 يومًا</option>
+              <option value="30">خلال 30 يومًا</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button id="save-button" class="btn" type="submit">حفظ المورد</button>
+            <button id="cancel-edit" class="btn btn-secondary" type="button" hidden>إلغاء التعديل</button>
+          </div>
+        </form>
+        <p id="form-message" class="form-message" role="status"></p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>قائمة الموردين</h2>
+          <div class="muted">البيانات المحفوظة على هذا المتصفح.</div>
+        </div>
+        <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الإجراءات</th>
+              <th>مدة السداد</th>
+              <th>تكلفة المنتج</th>
+              <th>الصنف</th>
+              <th>رقم الهاتف</th>
+              <th>اسم المورد</th>
+              <th>رقم المورد</th>
+            </tr>
+          </thead>
+          <tbody id="supplier-rows"></tbody>
+        </table>
+        </div>
+      </div>
+
+      <section class="panel" aria-labelledby="debts-title">
+        <div class="panel-head">
+          <h2 id="debts-title">مديونية المحل للموردين</h2>
+          <div class="muted">سجّل الفواتير والمدفوعات لمتابعة الرصيد وموعد السداد.</div>
+        </div>
+        <div id="debt-summary" class="debt-summary" aria-live="polite"></div>
+        <form id="debt-form" class="debt-form">
+          <div>
+            <label for="debt-supplier">المورد</label>
+            <select id="debt-supplier" required></select>
+          </div>
+          <div>
+            <label for="debt-amount">قيمة الفاتورة</label>
+            <input id="debt-amount" type="number" min="0.01" step="0.01" required placeholder="0.00">
+          </div>
+          <div>
+            <label for="debt-paid">المبلغ المدفوع</label>
+            <input id="debt-paid" type="number" min="0" step="0.01" value="0" required>
+          </div>
+          <div>
+            <label for="debt-date">تاريخ الفاتورة</label>
+            <input id="debt-date" type="date" required>
+          </div>
+          <button id="save-debt" class="btn" type="submit">حفظ المديونية</button>
+        </form>
+        <p id="debt-message" class="form-message" role="status"></p>
+        <div id="debts-list" class="debt-list" aria-live="polite"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    if (localStorage.getItem('loggedIn') !== 'true') {
+      window.location.href = 'index.html';
+    }
+
+    const supplierKey = 'restaurantSuppliers';
+    const debtKey = 'restaurantSupplierDebts';
+    const supplierForm = document.getElementById('supplier-form');
+    const supplierRows = document.getElementById('supplier-rows');
+    const debtForm = document.getElementById('debt-form');
+
+    function readSuppliers() {
+      try {
+        const suppliers = JSON.parse(localStorage.getItem(supplierKey));
+        return Array.isArray(suppliers) ? suppliers : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveSuppliers(suppliers) {
+      localStorage.setItem(supplierKey, JSON.stringify(suppliers));
+      renderSuppliers();
+      renderDebtSupplierOptions();
+    }
+
+    function renderSuppliers() {
+      const suppliers = readSuppliers();
+      document.getElementById('supplier-count').textContent = suppliers.length;
+      supplierRows.replaceChildren();
+
+      if (suppliers.length === 0) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 7;
+        cell.className = 'empty';
+        cell.textContent = 'لا توجد بيانات موردين. أضف أول مورد من النموذج أعلاه.';
+        row.append(cell);
+        supplierRows.append(row);
+        return;
+      }
+
+      suppliers.forEach((supplier) => {
+        const row = document.createElement('tr');
+        const actionsCell = document.createElement('td');
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const edit = document.createElement('button');
+        edit.className = 'btn btn-secondary';
+        edit.type = 'button';
+        edit.textContent = 'تعديل';
+        edit.addEventListener('click', () => startEdit(supplier));
+        const remove = document.createElement('button');
+        remove.className = 'btn btn-delete';
+        remove.type = 'button';
+        remove.textContent = 'حذف';
+        remove.addEventListener('click', () => {
+          if (!window.confirm(`حذف المورد ${supplier.name}؟`)) return;
+          saveSuppliers(readSuppliers().filter((item) => item.id !== supplier.id));
+          document.getElementById('form-message').textContent = 'تم حذف المورد.';
+        });
+        actions.append(edit, remove);
+        actionsCell.append(actions);
+
+        const costCell = document.createElement('td');
+        costCell.textContent = formatCurrency(supplier.cost, supplier.currency);
+        const termCell = document.createElement('td');
+        termCell.textContent = paymentTermLabel(supplier.paymentTerm);
+        const productCell = document.createElement('td');
+        productCell.textContent = supplier.product;
+        const phoneCell = document.createElement('td');
+        phoneCell.textContent = supplier.phone;
+        const nameCell = document.createElement('td');
+        nameCell.textContent = supplier.name;
+        const idCell = document.createElement('td');
+        idCell.textContent = supplier.id;
+        row.append(actionsCell, termCell, costCell, productCell, phoneCell, nameCell, idCell);
+        supplierRows.append(row);
+      });
+    }
+
+    function startEdit(supplier) {
+      document.getElementById('supplier-id').value = supplier.id;
+      document.getElementById('supplier-name').value = supplier.name;
+      document.getElementById('supplier-phone').value = supplier.phone;
+      document.getElementById('supplier-product').value = supplier.product;
+      document.getElementById('supplier-cost').value = supplier.cost;
+      document.getElementById('supplier-payment-term').value = supplier.paymentTerm || getSupplierSettings().paymentTerm;
+      activeSupplierCurrency = supplier.currency || supplierSettings.supplierCurrency;
+      updateCurrencyLabel();
+      document.getElementById('form-title').textContent = 'تعديل بيانات المورد';
+      document.getElementById('save-button').textContent = 'حفظ التعديل';
+      document.getElementById('cancel-edit').hidden = false;
+      document.getElementById('supplier-name').focus();
+    }
+
+    function resetForm() {
+      supplierForm.reset();
+      document.getElementById('supplier-id').value = '';
+      document.getElementById('supplier-payment-term').value = getSupplierSettings().paymentTerm;
+      activeSupplierCurrency = supplierSettings.supplierCurrency;
+      updateCurrencyLabel();
+      document.getElementById('form-title').textContent = 'إضافة مورد';
+      document.getElementById('save-button').textContent = 'حفظ المورد';
+      document.getElementById('cancel-edit').hidden = true;
+    }
+
+    function getSupplierSettings() {
+      try {
+        const settings = JSON.parse(localStorage.getItem('restaurantSettings'));
+        return {
+          supplierCurrency: settings?.supplierCurrency || 'ILS',
+          paymentTerm: settings?.paymentTerm || 'immediate',
+          costAlert: settings?.costAlert !== false,
+          costThreshold: Number(settings?.costThreshold) || 10
+        };
+      } catch {
+        return { supplierCurrency: 'ILS', paymentTerm: 'immediate', costAlert: true, costThreshold: 10 };
+      }
+    }
+
+    function formatCurrency(value, currency = supplierSettings.supplierCurrency) {
+      try {
+        return new Intl.NumberFormat('ar', { style: 'currency', currency }).format(Number(value));
+      } catch {
+        return `${Number(value).toFixed(2)} ${currency}`;
+      }
+    }
+
+    function paymentTermLabel(term) {
+      return ({ immediate: 'عند الاستلام', '7': '7 أيام', '14': '14 يومًا', '30': '30 يومًا' })[term] || 'عند الاستلام';
+    }
+
+    function readDebts() {
+      try {
+        const debts = JSON.parse(localStorage.getItem(debtKey));
+        return Array.isArray(debts) ? debts : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function renderDebtSupplierOptions() {
+      const select = document.getElementById('debt-supplier');
+      const selectedId = select.value;
+      select.replaceChildren();
+      const suppliers = readSuppliers();
+      if (suppliers.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'أضف موردًا أولًا';
+        select.append(option);
+        select.disabled = true;
+        document.getElementById('save-debt').disabled = true;
+        return;
+      }
+      select.disabled = false;
+      document.getElementById('save-debt').disabled = false;
+      suppliers.forEach((supplier) => {
+        const option = document.createElement('option');
+        option.value = supplier.id;
+        option.textContent = `${supplier.name} - ${supplier.product}`;
+        select.append(option);
+      });
+      if (suppliers.some((supplier) => supplier.id === selectedId)) select.value = selectedId;
+    }
+
+    function getDueDate(invoiceDate, paymentTerm) {
+      const dueDate = new Date(`${invoiceDate}T00:00:00`);
+      const days = paymentTerm === 'immediate' ? 0 : Number(paymentTerm) || 0;
+      dueDate.setDate(dueDate.getDate() + days);
+      return dueDate;
+    }
+
+    function daysUntilDue(dueDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.ceil((dueDate.getTime() - today.getTime()) / 86400000);
+    }
+
+    function renderDebts() {
+      const debts = readDebts();
+      const unpaidByCurrency = new Map();
+      debts.forEach((debt) => {
+        const balance = Math.max(0, Number(debt.amount) - Number(debt.paid));
+        if (balance > 0) {
+          const currency = debt.currency || supplierSettings.supplierCurrency;
+          unpaidByCurrency.set(currency, (unpaidByCurrency.get(currency) || 0) + balance);
+        }
+      });
+      const summary = document.getElementById('debt-summary');
+      summary.replaceChildren();
+      if (unpaidByCurrency.size === 0) {
+        const total = document.createElement('div');
+        total.className = 'debt-total';
+        total.textContent = 'إجمالي المديونية غير المدفوعة: 0';
+        summary.append(total);
+      } else {
+        unpaidByCurrency.forEach((amount, currency) => {
+          const total = document.createElement('div');
+          total.className = 'debt-total';
+          total.textContent = `المتبقي (${currency}): ${formatCurrency(amount, currency)}`;
+          summary.append(total);
+        });
+      }
+
+      const list = document.getElementById('debts-list');
+      list.replaceChildren();
+      if (debts.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'debt-empty';
+        empty.textContent = 'لا توجد مديونيات مسجلة بعد.';
+        list.append(empty);
+        return;
+      }
+
+      debts.forEach((debt) => {
+        const balance = Math.max(0, Number(debt.amount) - Number(debt.paid));
+        const dueDate = getDueDate(debt.invoiceDate, debt.paymentTerm);
+        const remainingDays = daysUntilDue(dueDate);
+        const isPaid = balance === 0;
+        const card = document.createElement('article');
+        card.className = `debt-card${isPaid ? ' paid' : remainingDays < 0 ? ' overdue' : ''}`;
+        const title = document.createElement('h3');
+        title.textContent = debt.supplierName;
+        const product = document.createElement('p');
+        product.textContent = `الصنف: ${debt.product}`;
+        const amounts = document.createElement('p');
+        amounts.textContent = `الفاتورة: ${formatCurrency(debt.amount, debt.currency)} | المدفوع: ${formatCurrency(debt.paid, debt.currency)}`;
+        const balanceText = document.createElement('p');
+        balanceText.className = 'debt-balance';
+        balanceText.textContent = `المتبقي: ${formatCurrency(balance, debt.currency)}`;
+        const due = document.createElement('p');
+        due.textContent = isPaid
+          ? 'تم سداد الفاتورة بالكامل.'
+          : remainingDays < 0
+            ? `متأخر عن موعد السداد بـ ${Math.abs(remainingDays)} يوم (الاستحقاق ${dueDate.toLocaleDateString('ar')}).`
+            : remainingDays === 0
+              ? 'موعد السداد اليوم.'
+              : `باقي ${remainingDays} يوم على السداد (الاستحقاق ${dueDate.toLocaleDateString('ar')}).`;
+        card.append(title, product, amounts, balanceText, due);
+
+        if (!isPaid) {
+          const actions = document.createElement('div');
+          actions.className = 'debt-actions';
+          const paymentButton = document.createElement('button');
+          paymentButton.className = 'btn';
+          paymentButton.type = 'button';
+          paymentButton.textContent = 'تسجيل دفعة';
+          paymentButton.addEventListener('click', () => {
+            const paymentValue = window.prompt(`أدخل مبلغ الدفعة (${debt.currency}):`);
+            if (paymentValue === null) return;
+            const payment = Number(paymentValue);
+            if (!Number.isFinite(payment) || payment <= 0 || payment > balance) {
+              window.alert('أدخل مبلغًا صحيحًا لا يتجاوز الرصيد المتبقي.');
+              return;
+            }
+            const updatedDebts = readDebts().map((item) => item.id === debt.id
+              ? { ...item, paid: Number(item.paid) + payment }
+              : item);
+            localStorage.setItem(debtKey, JSON.stringify(updatedDebts));
+            renderDebts();
+          });
+          actions.append(paymentButton);
+          card.append(actions);
+        }
+        list.append(card);
+      });
+    }
+
+    debtForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const supplier = readSuppliers().find((item) => item.id === document.getElementById('debt-supplier').value);
+      const amount = Number(document.getElementById('debt-amount').value);
+      const paid = Number(document.getElementById('debt-paid').value);
+      const invoiceDate = document.getElementById('debt-date').value;
+      if (!supplier || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(paid) || paid < 0 || paid > amount || !invoiceDate) return;
+
+      const debt = {
+        id: `DEBT-${Date.now()}-${Math.random()}`,
+        supplierId: supplier.id,
+        supplierName: supplier.name,
+        product: supplier.product,
+        currency: supplier.currency || supplierSettings.supplierCurrency,
+        paymentTerm: supplier.paymentTerm || supplierSettings.paymentTerm,
+        amount,
+        paid,
+        invoiceDate
+      };
+      const debts = readDebts();
+      debts.unshift(debt);
+      localStorage.setItem(debtKey, JSON.stringify(debts));
+      debtForm.reset();
+      document.getElementById('debt-date').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('debt-paid').value = '0';
+      document.getElementById('debt-message').textContent = 'تم حفظ مديونية المورد وحساب موعد السداد.';
+      renderDebts();
+    });
+
+    let supplierSettings = getSupplierSettings();
+    let activeSupplierCurrency = supplierSettings.supplierCurrency;
+    function updateCurrencyLabel() {
+      document.getElementById('cost-currency').textContent = ({ ILS: '₪', SAR: 'ر.س', USD: '$', JOD: 'د.أ' })[activeSupplierCurrency] || activeSupplierCurrency;
+    }
+    updateCurrencyLabel();
+    document.getElementById('supplier-payment-term').value = supplierSettings.paymentTerm;
+
+    supplierForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const id = document.getElementById('supplier-id').value;
+      const supplier = {
+        id: id || `SUP-${Date.now()}`,
+        name: document.getElementById('supplier-name').value.trim(),
+        phone: document.getElementById('supplier-phone').value.trim(),
+        product: document.getElementById('supplier-product').value.trim(),
+        cost: Number(document.getElementById('supplier-cost').value),
+        paymentTerm: document.getElementById('supplier-payment-term').value,
+        currency: activeSupplierCurrency
+      };
+      if (!supplier.name || !supplier.phone || !supplier.product || !Number.isFinite(supplier.cost) || supplier.cost <= 0) return;
+
+      const suppliers = readSuppliers();
+      const index = suppliers.findIndex((item) => item.id === id);
+      if (index >= 0) {
+        const previousCost = Number(suppliers[index].cost);
+        const increasePercent = previousCost > 0 ? ((supplier.cost - previousCost) / previousCost) * 100 : 0;
+        if (supplierSettings.costAlert && increasePercent >= supplierSettings.costThreshold) {
+          const accepted = window.confirm(`ارتفعت تكلفة هذا الصنف بنسبة ${increasePercent.toFixed(1)}%. هل تريد حفظ التكلفة الجديدة؟`);
+          if (!accepted) return;
+        }
+        suppliers[index] = supplier;
+      }
+      else suppliers.unshift(supplier);
+      saveSuppliers(suppliers);
+      resetForm();
+      document.getElementById('form-message').textContent = id ? 'تم تحديث بيانات المورد.' : 'تم حفظ المورد.';
+    });
+
+    document.getElementById('cancel-edit').addEventListener('click', resetForm);
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'restaurantSettings') {
+        supplierSettings = getSupplierSettings();
+        if (!document.getElementById('supplier-id').value) {
+          activeSupplierCurrency = supplierSettings.supplierCurrency;
+          document.getElementById('supplier-payment-term').value = supplierSettings.paymentTerm;
+          updateCurrencyLabel();
+        }
+        renderSuppliers();
+        renderDebtSupplierOptions();
+        renderDebts();
+      }
+    });
+    document.getElementById('debt-date').value = new Date().toISOString().slice(0, 10);
+    renderDebtSupplierOptions();
+    renderSuppliers();
+    renderDebts();
+  </script>
+</body>
+</html>

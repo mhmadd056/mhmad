@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>تسجيل الدخول</title>
+  <style>
+    :root {
+      --bg1: #0f172a;
+      --bg2: #111827;
+      --card: rgba(15, 23, 42, 0.8);
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --line: rgba(148, 163, 184, 0.2);
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Tahoma, Segoe UI, sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+    }
+    .card {
+      width: min(92%, 420px);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 30px 28px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.28);
+    }
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 18px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      box-shadow: 0 12px 24px rgba(59,130,246,0.35);
+    }
+    h1 { text-align: center; margin: 0 0 22px; }
+    .field { margin-bottom: 18px; }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    input {
+      width: 100%;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 14px 16px;
+      font-size: 1rem;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.2);
+    }
+    .btn {
+      width: 100%;
+      border: none;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .error {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #fecaca;
+      text-align: center;
+      display: none;
+    }
+    .error.show { display: block; }
+    .extra {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .remember { display: flex; align-items: center; gap: 8px; }
+    .remember input { width: auto; }
+    a { color: #93c5fd; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🔐</div>
+    <h1>تسجيل الدخول</h1>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">اسم المستخدم</label>
+        <input id="username" name="username" type="text" placeholder="أدخل اسم المستخدم" required>
+      </div>
+
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input id="password" name="password" type="password" placeholder="أدخل كلمة المرور" required>
+      </div>
+
+      <div class="extra">
+        <label class="remember"><input type="checkbox"> <span>تذكرني</span></label>
+        <a href="https://wa.me/972567040668" target="_blank">تواصل معنا</a>
+      </div>
+
+      <button class="btn" type="submit">دخول</button>
+    </form>
+
+    <div id="errorBox" class="error"></div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('loggedIn') === 'true') {
+      window.location.href = 'dashboard.html';
+    }
+
+    const form = document.getElementById('loginForm');
+    const errorBox = document.getElementById('errorBox');
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (username === 'admin' && password === '123456') {
+        localStorage.setItem('loggedIn', 'true');
+        localStorage.setItem('username', username);
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      errorBox.textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+      errorBox.classList.add('show');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>قائمة مطعم السوق</title>
+  <style>
+    :root { --ink:#18231f; --muted:#68756e; --line:#dce5df; --paper:#f4f7f2; --green:#176b4b; --lime:#d9ef8b; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family:Tahoma, Segoe UI, sans-serif; }
+    .page { width:min(100% - 32px, 980px); margin:0 auto; padding:30px 0 60px; }
+    header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:22px 0; border-bottom:1px solid var(--line); }
+    .eyebrow { color:var(--green); font-weight:bold; font-size:.85rem; margin:0 0 8px; }
+    h1 { font-size:1.8rem; margin:0; }
+    .table-badge { padding:12px 16px; background:var(--lime); border-radius:6px; font-weight:bold; white-space:nowrap; }
+    .intro { color:var(--muted); margin:22px 0; }
+    .menu { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; }
+    .meal { min-height:155px; padding:20px; background:white; border:1px solid var(--line); border-top:4px solid var(--green); display:flex; flex-direction:column; }
+    .meal-top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .meal h2 { font-size:1.1rem; margin:0; }
+    .meal-icon { font-size:1.6rem; }
+    .description { color:var(--muted); line-height:1.6; margin:12px 0 18px; }
+    .price { margin-top:auto; color:var(--green); font-size:1.1rem; font-weight:bold; }
+    .meal-controls { display:flex; gap:8px; margin-top:14px; }
+    .quantity { width:74px; min-height:42px; border:1px solid var(--line); border-radius:6px; padding:8px; font:inherit; }
+    .add-button, .send-order { min-height:42px; border:0; border-radius:6px; padding:9px 14px; background:var(--green); color:white; font:inherit; font-weight:bold; cursor:pointer; }
+    .cart { margin-top:28px; padding:20px; background:white; border:1px solid var(--line); }
+    .cart-list { display:grid; gap:8px; }
+    .cart-row { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); }
+    .remove-item { border:0; background:transparent; color:#a63b2d; cursor:pointer; font:inherit; }
+    .cart-total { font-size:1.1rem; font-weight:bold; margin:18px 0; }
+    .send-order:disabled { opacity:.5; cursor:not-allowed; }
+    .notice { min-height:1.4em; margin:12px 0 0; color:var(--green); }
+    .empty { padding:28px; background:white; border:1px dashed var(--line); color:var(--muted); text-align:center; grid-column:1 / -1; }
+    footer { margin-top:28px; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:.85rem; }
+    @media (max-width:520px) {
+      .page { width:min(100% - 24px, 980px); padding-top:16px; }
+      header { flex-direction:column; }
+      h1 { font-size:1.45rem; }
+      .table-badge { width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <p class="eyebrow">مطعم السوق</p>
+        <h1>قائمة الطعام</h1>
+      </div>
+      <div id="table-badge" class="table-badge">رقم الطاولة: --</div>
+    </header>
+    <p class="intro">اختر من وجباتنا، الأسعار موضحة بجانب كل وجبة.</p>
+    <section id="menu" class="menu" aria-label="وجبات المطعم"></section>
+    <section class="cart" aria-labelledby="cart-title">
+      <h2 id="cart-title">طلبك</h2>
+      <div id="cart-list" class="cart-list"></div>
+      <p id="cart-empty" class="intro">لم تضف وجبات إلى طلبك بعد.</p>
+      <p class="cart-total">المجموع: <span id="cart-total">0.00 ₪</span></p>
+      <button id="send-order" class="send-order" type="button" disabled>إرسال الطلب</button>
+      <p id="order-notice" class="notice" role="status" aria-live="polite"></p>
+    </section>
+    <footer>تُعرض هنا قائمة الطعام والأسعار التي يضيفها المطعم.</footer>
+  </main>
+
+  <script>
+    const tableNumber = new URLSearchParams(window.location.search).get('table');
+    const validTableNumber = tableNumber && /^[1-9]\d{0,2}$/.test(tableNumber);
+    document.getElementById('table-badge').textContent = validTableNumber
+      ? `رقم الطاولة: ${tableNumber}`
+      : 'يرجى طلب رابط الطاولة من الموظف';
+
+    const defaultMenu = [
+      { id: 'meal-1', name: 'مشاوي مشكلة', price: 42, cost: null, description: 'تشكيلة مشاوي مع الأرز والسلطة', icon: '🍢' },
+      { id: 'meal-2', name: 'برغر لحم', price: 29, cost: null, description: 'لحم طازج مع الجبن والبطاطا', icon: '🍔' },
+      { id: 'meal-3', name: 'سلطة فتوش', price: 18, cost: null, description: 'خضار طازجة مع الخبز المحمص', icon: '🥗' }
+    ];
+    const orderItems = new Map();
+
+    function renderMenu() {
+      const container = document.getElementById('menu');
+      let meals = defaultMenu;
+      try {
+        const savedMenu = JSON.parse(localStorage.getItem('restaurantMenu'));
+        if (Array.isArray(savedMenu)) {
+          meals = savedMenu.map((meal) => {
+            const defaultMeal = defaultMenu.find((item) => item.id === meal.id);
+            const cost = meal.cost === undefined || meal.cost === null || meal.cost === ''
+              ? defaultMeal?.cost ?? null
+              : Number(meal.cost);
+            return { ...defaultMeal, ...meal, cost };
+          });
+        }
+      } catch {
+        meals = defaultMenu;
+      }
+
+      container.replaceChildren();
+      if (meals.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = 'لا توجد وجبات متاحة حاليًا.';
+        container.append(empty);
+        return;
+      }
+
+      meals.forEach((meal) => {
+        const card = document.createElement('article');
+        card.className = 'meal';
+        const top = document.createElement('div');
+        top.className = 'meal-top';
+        const name = document.createElement('h2');
+        name.textContent = meal.name;
+        const icon = document.createElement('span');
+        icon.className = 'meal-icon';
+        icon.textContent = meal.icon || '🍽️';
+        top.append(name, icon);
+        const description = document.createElement('p');
+        description.className = 'description';
+        description.textContent = meal.description || '';
+        const price = document.createElement('div');
+        price.className = 'price';
+        price.textContent = `${Number(meal.price).toFixed(2)} ₪`;
+        const controls = document.createElement('div');
+        controls.className = 'meal-controls';
+        const quantity = document.createElement('input');
+        quantity.className = 'quantity';
+        quantity.type = 'number';
+        quantity.min = '1';
+        quantity.max = '50';
+        quantity.value = '1';
+        quantity.setAttribute('aria-label', `كمية ${meal.name}`);
+        const addButton = document.createElement('button');
+        addButton.className = 'add-button';
+        addButton.type = 'button';
+        addButton.textContent = 'أضف للطلب';
+        addButton.addEventListener('click', () => addToOrder(meal, Number(quantity.value)));
+        controls.append(quantity, addButton);
+        card.append(top, description, price, controls);
+        container.append(card);
+      });
+    }
+
+    function addToOrder(meal, quantity) {
+      if (!validTableNumber) {
+        document.getElementById('order-notice').textContent = 'لا يمكن إرسال الطلب قبل تحديد رقم الطاولة من الموظف.';
+        return;
+      }
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) return;
+      const current = orderItems.get(meal.id);
+      orderItems.set(meal.id, {
+        id: meal.id,
+        name: meal.name,
+        price: Number(meal.price),
+        unitCost: meal.cost === undefined || meal.cost === null ? null : Number(meal.cost),
+        quantity: Math.min(50, quantity + (current ? current.quantity : 0))
+      });
+      document.getElementById('order-notice').textContent = 'أضيفت الوجبة إلى طلبك.';
+      renderCart();
+    }
+
+    function renderCart() {
+      const list = document.getElementById('cart-list');
+      const emptyMessage = document.getElementById('cart-empty');
+      const entries = Array.from(orderItems.values());
+      list.replaceChildren();
+      emptyMessage.hidden = entries.length > 0;
+      let total = 0;
+
+      entries.forEach((item) => {
+        total += item.price * item.quantity;
+        const row = document.createElement('div');
+        row.className = 'cart-row';
+        const label = document.createElement('span');
+        label.textContent = `${item.name} × ${item.quantity}`;
+        const amount = document.createElement('strong');
+        amount.textContent = `${(item.price * item.quantity).toFixed(2)} ₪`;
+        const remove = document.createElement('button');
+        remove.className = 'remove-item';
+        remove.type = 'button';
+        remove.textContent = 'إزالة';
+        remove.addEventListener('click', () => {
+          orderItems.delete(item.id);
+          renderCart();
+        });
+        row.append(label, amount, remove);
+        list.append(row);
+      });
+
+      document.getElementById('cart-total').textContent = `${total.toFixed(2)} ₪`;
+      document.getElementById('send-order').disabled = entries.length === 0 || !validTableNumber;
+    }
+
+    document.getElementById('send-order').addEventListener('click', () => {
+      if (!validTableNumber || orderItems.size === 0) return;
+      let orders = [];
+      try {
+        const savedOrders = JSON.parse(localStorage.getItem('restaurantOrders'));
+        if (Array.isArray(savedOrders)) orders = savedOrders;
+      } catch {
+        orders = [];
+      }
+
+      const items = Array.from(orderItems.values());
+      const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const order = {
+        id: `${Date.now()}-${Math.random()}`,
+        table: tableNumber,
+        items,
+        total,
+        createdAt: new Date().toISOString(),
+        status: 'new'
+      };
+      orders.unshift(order);
+      localStorage.setItem('restaurantOrders', JSON.stringify(orders));
+      orderItems.clear();
+      renderCart();
+      document.getElementById('order-notice').textContent = `تم إرسال طلب الطاولة ${tableNumber} إلى المطعم.`;
+    });
+
+    renderMenu();
+    renderCart();
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'restaurantMenu') renderMenu();
+    });
+  </script>
+</body>
+</html>

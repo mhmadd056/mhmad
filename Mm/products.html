@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة قائمة الطعام</title>
+  <style>
+    :root { --ink:#18231f; --muted:#68756e; --line:#dce5df; --paper:#f4f7f2; --green:#176b4b; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Tahoma, Segoe UI, sans-serif; background:var(--paper); color:var(--ink); }
+    .app { display:flex; min-height:100vh; }
+    .sidebar { flex:0 0 250px; background:#173b30; color:white; padding:24px 18px; }
+    .brand { font-size:1.35rem; font-weight:bold; margin:0 0 28px; }
+    .nav a { display:block; color:#e5eee8; text-decoration:none; padding:12px 14px; border-radius:8px; margin:7px 0; }
+    .nav a:hover, .nav a.active { background:#285541; color:white; }
+    .main { flex:1; min-width:0; padding:28px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; background:white; border:1px solid var(--line); padding:18px 22px; }
+    h1, h2, h3, p { margin-top:0; }
+    .eyebrow { color:var(--green); font-size:.82rem; font-weight:bold; margin-bottom:6px; }
+    .section { margin-top:24px; background:white; border:1px solid var(--line); padding:22px; }
+    .form-grid { display:grid; grid-template-columns:1.5fr 1fr 1fr 1.5fr auto; gap:12px; align-items:end; }
+    label { display:block; margin-bottom:7px; font-size:.9rem; font-weight:bold; }
+    input { width:100%; min-height:44px; border:1px solid #cbd7cf; border-radius:6px; padding:10px 12px; font:inherit; }
+    input:focus { outline:2px solid #a5cfb4; border-color:var(--green); }
+    button, .button { min-height:42px; border:0; border-radius:6px; padding:10px 15px; background:var(--green); color:white; font:inherit; font-weight:bold; cursor:pointer; text-decoration:none; }
+    .secondary { background:#e9f1eb; color:var(--green); }
+    .danger { background:#fff0ed; color:#a63b2d; }
+    .menu-list { display:grid; gap:10px; margin-top:18px; }
+    .menu-row { display:grid; grid-template-columns:56px 1fr auto auto; align-items:center; gap:14px; padding:14px; border:1px solid var(--line); }
+    .food-icon { display:grid; place-items:center; width:48px; aspect-ratio:1; background:#eff5e2; border-radius:6px; font-size:1.5rem; }
+    .item-name { margin:0 0 4px; }
+    .item-description { color:var(--muted); font-size:.9rem; margin:0; }
+    .item-cost { color:var(--muted); font-size:.82rem; margin:7px 0 0; }
+    .price { font-size:1.05rem; font-weight:bold; white-space:nowrap; }
+    .actions { display:flex; gap:8px; }
+    .table-link { display:grid; grid-template-columns:minmax(100px,180px) auto 1fr; gap:12px; align-items:end; }
+    .generated-link { min-height:44px; overflow-wrap:anywhere; color:var(--green); }
+    .hint { color:var(--muted); font-size:.9rem; margin:12px 0 0; }
+    .empty { padding:26px; color:var(--muted); text-align:center; border:1px dashed var(--line); }
+    .status { min-height:1.4em; color:var(--green); margin:12px 0 0; }
+    @media (max-width:850px) {
+      .app { display:block; }
+      .sidebar { padding:14px; }
+      .brand { margin:0 0 10px; }
+      .nav { display:flex; gap:5px; overflow-x:auto; }
+      .nav a { white-space:nowrap; margin:0; }
+      .main { padding:16px; }
+      .form-grid { grid-template-columns:1fr 1fr; }
+      .table-link { grid-template-columns:1fr auto; }
+      .generated-link { grid-column:1 / -1; }
+    }
+    @media (max-width:520px) {
+      .topbar { align-items:flex-start; flex-direction:column; }
+      .form-grid { grid-template-columns:1fr; }
+      .menu-row { grid-template-columns:48px 1fr auto; }
+      .price { grid-column:2; }
+      .actions { grid-column:1 / -1; justify-content:flex-end; }
+      .section { padding:16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">مطعم السوق</div>
+      <nav class="nav" aria-label="القائمة الرئيسية">
+        <a href="dashboard.html">لوحة التحكم</a>
+        <a href="customers.html">العملاء</a>
+        <a href="products.html" class="active">قائمة الطعام</a>
+        <a href="suppliers.html">الموردون</a>
+        <a href="settings.html">الإعدادات</a>
+        <a href="logout.html">تسجيل الخروج</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">إدارة المطعم</p>
+          <h1>قائمة الطعام</h1>
+        </div>
+        <a class="button secondary" href="customer.html?table=1" target="_blank" rel="noopener">معاينة صفحة الزبون</a>
+      </header>
+
+      <section class="section" aria-labelledby="menu-form-title">
+        <h2 id="menu-form-title">إضافة وجبة</h2>
+        <form id="menu-form" class="form-grid">
+          <div>
+            <label for="meal-name">اسم الوجبة</label>
+            <input id="meal-name" name="name" required maxlength="70" placeholder="مثال: منسف دجاج">
+          </div>
+          <div>
+            <label for="meal-price">السعر</label>
+            <input id="meal-price" name="price" required type="number" min="0.01" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label for="meal-cost">تكلفة التحضير</label>
+            <input id="meal-cost" name="cost" required type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div>
+            <label for="meal-description">وصف مختصر</label>
+            <input id="meal-description" name="description" maxlength="120" placeholder="مكونات أو تفاصيل الوجبة">
+          </div>
+          <button id="save-meal" type="submit">إضافة للقائمة</button>
+        </form>
+        <p id="form-status" class="status" role="status"></p>
+      </section>
+
+      <section class="section" aria-labelledby="table-link-title">
+        <h2 id="table-link-title">رابط الطاولة</h2>
+        <div class="table-link">
+          <div>
+            <label for="table-number">رقم الطاولة</label>
+            <input id="table-number" type="number" min="1" max="999" value="1">
+          </div>
+          <button id="make-link" type="button">إنشاء الرابط</button>
+          <a id="table-url" class="generated-link" hidden></a>
+        </div>
+        <p class="hint">افتح الرابط أو اطبعه كرمز QR وضعه على الطاولة؛ رقم الطاولة سيظهر للزبون ثابتًا داخل صفحته.</p>
+      </section>
+
+      <section class="section" aria-labelledby="menu-list-title">
+        <h2 id="menu-list-title">الوجبات الحالية <span id="meal-count"></span></h2>
+        <div id="menu-list" class="menu-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    if (localStorage.getItem('loggedIn') !== 'true') {
+      window.location.href = 'index.html';
+    }
+
+    const menuKey = 'restaurantMenu';
+    const defaultMenu = [
+      { id: 'meal-1', name: 'مشاوي مشكلة', price: 42, cost: null, description: 'تشكيلة مشاوي مع الأرز والسلطة', icon: '🍢' },
+      { id: 'meal-2', name: 'برغر لحم', price: 29, cost: null, description: 'لحم طازج مع الجبن والبطاطا', icon: '🍔' },
+      { id: 'meal-3', name: 'سلطة فتوش', price: 18, cost: null, description: 'خضار طازجة مع الخبز المحمص', icon: '🥗' }
+    ];
+    const form = document.getElementById('menu-form');
+    const menuList = document.getElementById('menu-list');
+    const formStatus = document.getElementById('form-status');
+    let editingId = null;
+
+    function getMenu() {
+      try {
+        const savedMenu = JSON.parse(localStorage.getItem(menuKey));
+        return Array.isArray(savedMenu) ? savedMenu.map((meal) => {
+          const defaultMeal = defaultMenu.find((item) => item.id === meal.id);
+          const cost = meal.cost === undefined || meal.cost === null || meal.cost === ''
+            ? defaultMeal?.cost ?? null
+            : Number(meal.cost);
+          return { ...defaultMeal, ...meal, cost };
+        }) : defaultMenu;
+      } catch {
+        return defaultMenu;
+      }
+    }
+
+    function saveMenu(menu) {
+      localStorage.setItem(menuKey, JSON.stringify(menu));
+      renderMenu();
+    }
+
+    function renderMenu() {
+      const menu = getMenu();
+      document.getElementById('meal-count').textContent = `(${menu.length})`;
+      menuList.replaceChildren();
+
+      if (menu.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'لا توجد وجبات بعد. أضف أول وجبة من النموذج أعلاه.';
+        menuList.append(empty);
+        return;
+      }
+
+      menu.forEach((meal) => {
+        const row = document.createElement('article');
+        row.className = 'menu-row';
+        const icon = document.createElement('span');
+        icon.className = 'food-icon';
+        icon.textContent = meal.icon || '🍽️';
+        const details = document.createElement('div');
+        const name = document.createElement('h3');
+        name.className = 'item-name';
+        name.textContent = meal.name;
+        const description = document.createElement('p');
+        description.className = 'item-description';
+        description.textContent = meal.description || '';
+        const cost = document.createElement('p');
+        cost.className = 'item-cost';
+        cost.textContent = meal.cost === null ? 'أدخل تكلفة التحضير' : `تكلفة التحضير: ${Number(meal.cost).toFixed(2)} ₪`;
+        details.append(name, description, cost);
+        const price = document.createElement('span');
+        price.className = 'price';
+        price.textContent = `${Number(meal.price).toFixed(2)} ₪`;
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const editButton = document.createElement('button');
+        editButton.className = 'secondary';
+        editButton.type = 'button';
+        editButton.textContent = 'تعديل';
+        editButton.addEventListener('click', () => editMeal(meal));
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'danger';
+        deleteButton.type = 'button';
+        deleteButton.textContent = 'حذف';
+        deleteButton.addEventListener('click', () => {
+          saveMenu(getMenu().filter((item) => item.id !== meal.id));
+          formStatus.textContent = 'تم حذف الوجبة من قائمة الزبائن.';
+        });
+        actions.append(editButton, deleteButton);
+        row.append(icon, details, price, actions);
+        menuList.append(row);
+      });
+    }
+
+    function editMeal(meal) {
+      editingId = meal.id;
+      form.elements.name.value = meal.name;
+      form.elements.price.value = meal.price;
+      form.elements.cost.value = meal.cost ?? '';
+      form.elements.description.value = meal.description || '';
+      document.getElementById('save-meal').textContent = 'حفظ التعديل';
+      document.getElementById('menu-form-title').textContent = 'تعديل وجبة';
+      form.elements.name.focus();
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const name = form.elements.name.value.trim();
+      const price = Number(form.elements.price.value);
+      const cost = Number(form.elements.cost.value);
+      const description = form.elements.description.value.trim();
+      if (!name || !Number.isFinite(price) || price <= 0 || !Number.isFinite(cost) || cost < 0) return;
+
+      const menu = getMenu();
+      if (editingId) {
+        const meal = menu.find((item) => item.id === editingId);
+        if (meal) Object.assign(meal, { name, price, cost, description });
+      } else {
+        menu.push({ id: `${Date.now()}-${Math.random()}`, name, price, cost, description, icon: '🍽️' });
+      }
+      saveMenu(menu);
+      form.reset();
+      editingId = null;
+      document.getElementById('save-meal').textContent = 'إضافة للقائمة';
+      document.getElementById('menu-form-title').textContent = 'إضافة وجبة';
+      formStatus.textContent = 'تم حفظ القائمة، وستظهر الوجبات في صفحة الزبون على هذا المتصفح.';
+    });
+
+    document.getElementById('make-link').addEventListener('click', () => {
+      const number = Number(document.getElementById('table-number').value);
+      const link = document.getElementById('table-url');
+      if (!Number.isInteger(number) || number < 1 || number > 999) return;
+      const url = new URL('customer.html', window.location.href);
+      url.searchParams.set('table', String(number));
+      link.href = url.href;
+      link.textContent = `رابط الطاولة ${number}: ${url.href}`;
+      link.hidden = false;
+    });
+
+    renderMenu();
+  </script>
+</body>
+</html>

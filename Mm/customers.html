@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>العملاء</title>
+  <style>
+    body { margin:0; font-family:Tahoma, Segoe UI, sans-serif; background:#f5f7fb; color:#0f172a; }
+    .app { display:flex; min-height:100vh; }
+    .sidebar { width:260px; background:#0f172a; color:white; padding:22px 18px; }
+    .brand { font-size:1.4rem; font-weight:bold; margin-bottom:22px; }
+    .nav a { display:block; color:#e2e8f0; text-decoration:none; padding:12px 14px; border-radius:10px; margin:8px 0; }
+    .nav a:hover, .nav a.active { background:#1e293b; }
+    .main { flex:1; padding:28px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:16px; padding:18px 22px; box-shadow:0 8px 18px rgba(15,23,42,0.05); }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-size:0.8rem; font-weight:bold; }
+    .green { background:#dcfce7; color:#166534; }
+    .red { background:#fee2e2; color:#991b1b; }
+    .orders-section { margin-top:24px; padding:20px; background:white; border:1px solid #e2e8f0; border-radius:12px; }
+    .section-heading { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+    .section-heading h2 { margin:0; font-size:1.15rem; }
+    .order-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr)); gap:14px; }
+    .order-card { min-width:0; padding:16px; border:1px solid #e2e8f0; border-top:4px solid #f59e0b; border-radius:8px; background:#fff; }
+    .order-card.completed { border-top-color:#16a34a; }
+    .order-card.cancelled { border-top-color:#dc2626; }
+    .order-card h3 { margin:0; font-size:1.05rem; }
+    .order-meta { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; color:#64748b; font-size:.88rem; }
+    .order-items { padding:12px 0; margin:0; line-height:1.8; }
+    .order-total { font-weight:bold; }
+    .cancel-reason { padding:10px; background:#fff1f2; color:#9f1239; border-radius:6px; line-height:1.6; }
+    .order-actions { display:flex; gap:8px; margin-top:14px; }
+    .order-actions button { border:0; border-radius:8px; padding:9px 12px; color:white; font:inherit; cursor:pointer; }
+    .complete-button { background:#15803d; }
+    .cancel-button { background:#b91c1c; }
+    .order-empty { grid-column:1 / -1; margin:0; padding:18px; color:#64748b; background:#f8fafc; border-radius:8px; }
+    .top-actions { display:flex; align-items:center; gap:12px; }
+    .notification-button { border:0; border-radius:8px; padding:10px 14px; background:#176b4b; color:white; font:inherit; font-weight:bold; cursor:pointer; }
+    .notification-button[aria-pressed="true"] { background:#e9f1eb; color:#176b4b; }
+    .notification-status { color:#64748b; font-size:.86rem; }
+    .arrival-alert { margin-top:18px; padding:13px 16px; border:1px solid #f4cf75; border-right:4px solid #e5a323; border-radius:8px; background:#fff8e7; color:#674204; }
+    @media (max-width:600px) { .main { padding:16px; } .orders-section { padding:14px; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">My Market</div>
+      <nav class="nav">
+        <a href="dashboard.html">🏠 لوحة التحكم</a>
+        <a href="customers.html" class="active">👥 العملاء</a>
+        <a href="products.html">📦 المنتجات</a>
+        <a href="suppliers.html">🚚 الموردين</a>
+        <a href="settings.html">⚙️ الإعدادات</a>
+        <a href="logout.html">🔓 تسجيل الخروج</a>
+      </nav>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <h2>إدارة الطلبات</h2>
+        <div class="top-actions">
+          <span id="notification-status" class="notification-status">فعّل التنبيه لاستقبال الصوت والإشعار.</span>
+          <button id="notification-button" class="notification-button" type="button" aria-pressed="false">تفعيل التنبيهات</button>
+        </div>
+      </div>
+
+      <div id="arrival-alert" class="arrival-alert" role="alert" aria-live="assertive" hidden></div>
+
+      <section class="orders-section" aria-labelledby="pending-title">
+        <div class="section-heading">
+          <h2 id="pending-title">الطلبات قيد الانتظار</h2>
+          <span id="pending-count" class="pill red">0</span>
+        </div>
+        <div id="pending-orders" class="order-grid" aria-live="polite"></div>
+      </section>
+
+      <section class="orders-section" aria-labelledby="completed-title">
+        <div class="section-heading">
+          <h2 id="completed-title">الطلبات المكتملة</h2>
+          <span id="completed-count" class="pill green">0</span>
+        </div>
+        <div id="completed-orders" class="order-grid"></div>
+      </section>
+
+      <section class="orders-section" aria-labelledby="cancelled-title">
+        <div class="section-heading">
+          <h2 id="cancelled-title">الطلبات الملغاة</h2>
+          <span id="cancelled-count" class="pill red">0</span>
+        </div>
+        <div id="cancelled-orders" class="order-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    if (localStorage.getItem('loggedIn') !== 'true') {
+      window.location.href = 'index.html';
+    }
+
+    function readOrders() {
+      try {
+        const savedOrders = JSON.parse(localStorage.getItem('restaurantOrders'));
+        return Array.isArray(savedOrders) ? savedOrders : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setOrderStatus(orderId, status, cancelReason = '') {
+      const updatedOrders = readOrders().map((order) => order.id === orderId
+        ? { ...order, status, cancelReason }
+        : order);
+      localStorage.setItem('restaurantOrders', JSON.stringify(updatedOrders));
+      renderOrders();
+    }
+
+    function createOrderCard(order, group) {
+      const card = document.createElement('article');
+      card.className = `order-card ${group}`;
+      const title = document.createElement('h3');
+      title.textContent = `الطاولة رقم ${order.table}`;
+      const meta = document.createElement('div');
+      meta.className = 'order-meta';
+      const status = document.createElement('span');
+      status.className = `pill ${group === 'completed' ? 'green' : 'red'}`;
+      status.textContent = group === 'completed' ? 'مكتمل' : group === 'cancelled' ? 'ملغي' : 'قيد الانتظار';
+      const date = document.createElement('time');
+      if (order.createdAt) {
+        date.dateTime = order.createdAt;
+        date.textContent = new Date(order.createdAt).toLocaleString('ar');
+      }
+      meta.append(status, date);
+
+      const items = document.createElement('p');
+      items.className = 'order-items';
+      items.textContent = (order.items || []).map((item) => `${item.name} × ${item.quantity}`).join('، ');
+      const total = document.createElement('div');
+      total.className = 'order-total';
+      total.textContent = `المجموع: ${Number(order.total).toFixed(2)} ₪`;
+      card.append(title, meta, items, total);
+
+      if (group === 'cancelled') {
+        const reason = document.createElement('p');
+        reason.className = 'cancel-reason';
+        reason.textContent = `سبب الإلغاء: ${order.cancelReason || 'غير محدد'}`;
+        card.append(reason);
+      }
+
+      if (group === 'pending') {
+        const actions = document.createElement('div');
+        actions.className = 'order-actions';
+        const complete = document.createElement('button');
+        complete.className = 'complete-button';
+        complete.type = 'button';
+        complete.textContent = 'إكمال الطلب';
+        complete.addEventListener('click', () => setOrderStatus(order.id, 'done'));
+        const cancel = document.createElement('button');
+        cancel.className = 'cancel-button';
+        cancel.type = 'button';
+        cancel.textContent = 'إلغاء الطلب';
+        cancel.addEventListener('click', () => {
+          const reason = window.prompt('اكتب سبب إلغاء الطلب:');
+          if (reason && reason.trim()) setOrderStatus(order.id, 'cancelled', reason.trim());
+        });
+        actions.append(complete, cancel);
+        card.append(actions);
+      }
+      return card;
+    }
+
+    function renderGroup(containerId, orders, group, emptyText) {
+      const container = document.getElementById(containerId);
+      container.replaceChildren();
+      if (orders.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'order-empty';
+        empty.textContent = emptyText;
+        container.append(empty);
+        return;
+      }
+      orders.forEach((order) => container.append(createOrderCard(order, group)));
+    }
+
+    function renderOrders() {
+      const orders = readOrders();
+      const pending = orders.filter((order) => !['done', 'completed', 'cancelled'].includes(order.status));
+      const completed = orders.filter((order) => ['done', 'completed'].includes(order.status));
+      const cancelled = orders.filter((order) => order.status === 'cancelled');
+      document.getElementById('pending-count').textContent = pending.length;
+      document.getElementById('completed-count').textContent = completed.length;
+      document.getElementById('cancelled-count').textContent = cancelled.length;
+      renderGroup('pending-orders', pending, 'pending', 'لا توجد طلبات قيد الانتظار.');
+      renderGroup('completed-orders', completed, 'completed', 'لا توجد طلبات مكتملة.');
+      renderGroup('cancelled-orders', cancelled, 'cancelled', 'لا توجد طلبات ملغاة.');
+    }
+
+    let audioContext = null;
+    let notificationPermission = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+    const seenOrderIds = new Set(readOrders().map((order) => order.id));
+    const notificationButton = document.getElementById('notification-button');
+    const notificationStatus = document.getElementById('notification-status');
+    const arrivalAlert = document.getElementById('arrival-alert');
+
+    notificationButton.addEventListener('click', async () => {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass && !audioContext) audioContext = new AudioContextClass();
+        if (audioContext && audioContext.state === 'suspended') await audioContext.resume();
+
+        if ('Notification' in window && Notification.permission === 'default') {
+          notificationPermission = await Notification.requestPermission() === 'granted';
+        } else if ('Notification' in window) {
+          notificationPermission = Notification.permission === 'granted';
+        }
+
+        const soundReady = Boolean(audioContext && audioContext.state === 'running');
+        notificationButton.setAttribute('aria-pressed', String(soundReady || notificationPermission));
+        notificationButton.textContent = soundReady || notificationPermission ? 'التنبيهات مفعّلة' : 'تفعيل التنبيهات';
+        notificationStatus.textContent = soundReady || notificationPermission
+          ? 'ستسمع تنبيهًا عند وصول طلب جديد.'
+          : 'لم يسمح المتصفح بالتنبيهات؛ تحقق من أذونات الموقع.';
+        if (soundReady) playOrderSound();
+      } catch {
+        notificationStatus.textContent = 'تعذّر تفعيل الصوت أو الإشعارات في هذا المتصفح.';
+      }
+    });
+
+    function playOrderSound() {
+      if (!audioContext || audioContext.state !== 'running') return;
+      const startTime = audioContext.currentTime;
+      [0, 0.28].forEach((delay) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 880;
+        gain.gain.setValueAtTime(0.0001, startTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.16, startTime + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + delay + 0.18);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startTime + delay);
+        oscillator.stop(startTime + delay + 0.2);
+      });
+    }
+
+    function announceIncomingOrders(newOrders) {
+      if (newOrders.length === 0) return;
+      const firstOrder = newOrders[0];
+      const summary = newOrders.length === 1
+        ? `وصل طلب جديد من الطاولة رقم ${firstOrder.table}.`
+        : `وصلت ${newOrders.length} طلبات جديدة، أولها من الطاولة رقم ${firstOrder.table}.`;
+      arrivalAlert.textContent = summary;
+      arrivalAlert.hidden = false;
+      window.setTimeout(() => { arrivalAlert.hidden = true; }, 8000);
+      playOrderSound();
+
+      if (notificationPermission && 'Notification' in window) {
+        new Notification('طلب جديد للمطعم', {
+          body: summary,
+          tag: `restaurant-order-${firstOrder.id}`
+        });
+      }
+    }
+
+    renderOrders();
+    window.addEventListener('storage', (event) => {
+      if (event.key !== 'restaurantOrders') return;
+      let updatedOrders = [];
+      try {
+        const parsedOrders = JSON.parse(event.newValue);
+        if (Array.isArray(parsedOrders)) updatedOrders = parsedOrders;
+      } catch {
+        updatedOrders = readOrders();
+      }
+
+      const incomingOrders = updatedOrders.filter((order) => order.status === 'new' && !seenOrderIds.has(order.id));
+      updatedOrders.forEach((order) => seenOrderIds.add(order.id));
+      renderOrders();
+      announceIncomingOrders(incomingOrders);
+    });
+  </script>
+</body>
+</html>

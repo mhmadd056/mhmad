@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم</title>
+  <style>
+    body { margin:0; font-family:Tahoma, Segoe UI, sans-serif; background:#f5f7fb; color:#0f172a; }
+    .app { display:flex; min-height:100vh; }
+    .sidebar { width:260px; background:#0f172a; color:white; padding:22px 18px; }
+    .brand { font-size:1.5rem; font-weight:bold; margin-bottom:22px; }
+    .nav a { display:block; color:#e2e8f0; text-decoration:none; padding:12px 14px; border-radius:10px; margin:8px 0; }
+    .nav a:hover, .nav a.active { background:#1e293b; }
+    .main { flex:1; padding:28px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:16px; padding:18px 22px; box-shadow:0 8px 18px rgba(15,23,42,0.05); }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; margin-top:28px; }
+    .card { background:white; border:1px solid #e2e8f0; border-radius:16px; padding:20px; }
+    .big { font-size:2rem; font-weight:bold; margin:10px 0; }
+    table { width:100%; border-collapse:collapse; margin-top:28px; background:white; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden; }
+    th, td { padding:14px 16px; border-bottom:1px solid #e2e8f0; text-align:right; }
+    th { background:#f8fafc; }
+    .pill { display:inline-block; padding:6px 10px; border-radius:999px; font-size:0.8rem; font-weight:bold; }
+    .green { background:#dcfce7; color:#166534; }
+    .blue { background:#dbeafe; color:#1d4ed8; }
+    .yellow { background:#fef3c7; color:#92400e; }
+    .logout { background:#ef4444; color:white; border:none; border-radius:10px; padding:10px 16px; cursor:pointer; }
+    .orders-panel { margin-top:28px; background:white; border:1px solid #e2e8f0; border-radius:16px; padding:20px; }
+    .orders-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .orders-list { display:grid; gap:12px; }
+    .order-item { padding:16px; border:1px solid #e2e8f0; border-right:4px solid #f59e0b; border-radius:8px; }
+    .order-item.done { border-right-color:#16a34a; }
+    .order-header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .order-lines { color:#475569; line-height:1.8; margin:10px 0; }
+    .order-footer { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .order-button { border:0; border-radius:8px; background:#176b4b; color:white; padding:9px 13px; cursor:pointer; }
+    .order-button:disabled { background:#dcfce7; color:#166534; cursor:default; }
+    .order-empty { color:#64748b; padding:16px 0; }
+    .metric-note { color:#64748b; font-size:.85rem; }
+    .profit-warning { color:#b45309; }
+    .recent-orders { overflow-x:auto; }
+    .recent-orders table { min-width:620px; }
+    @media (max-width:600px) { .main { padding:16px; } .sidebar { width:100%; } .orders-heading, .order-header, .order-footer { align-items:flex-start; flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">My Market</div>
+      <nav class="nav">
+        <a href="dashboard.html" class="active">🏠 لوحة التحكم</a>
+        <a href="customers.html">👥 العملاء</a>
+        <a href="products.html">📦 المنتجات</a>
+        <a href="suppliers.html">🚚 الموردين</a>
+        <a href="settings.html">⚙️ الإعدادات</a>
+        <a href="logout.html">🔓 تسجيل الخروج</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <h2>لوحة التحكم</h2>
+        <div>مرحباً، <span id="welcome-user">admin</span></div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div>مبيعات الطلبات المكتملة</div>
+          <div id="sales-total" class="big">0.00 ₪</div>
+          <div class="metric-note">من الطلبات المكتملة فقط</div>
+        </div>
+        <div class="card">
+          <div>إجمالي الطلبات</div>
+          <div id="orders-total" class="big">0</div>
+          <div id="orders-breakdown" class="metric-note">0 مكتمل · 0 قيد الانتظار · 0 ملغي</div>
+        </div>
+        <div class="card">
+          <div>طلبات قيد الانتظار</div>
+          <div id="pending-total" class="big">0</div>
+          <div class="metric-note">تتحدث مع كل طلب جديد</div>
+        </div>
+        <div class="card">
+          <div>ربح الطلبات المكتملة</div>
+          <div id="profit-total" class="big">0.00 ₪</div>
+          <div id="profit-note" class="metric-note">المبيعات ناقص تكلفة التحضير، قبل المصاريف العامة</div>
+        </div>
+      </div>
+
+      <section class="orders-panel" aria-labelledby="orders-title">
+        <div class="orders-heading">
+          <h2 id="orders-title">طلبات الزبائن</h2>
+          <strong>طلبات جديدة: <span id="new-order-count">0</span></strong>
+        </div>
+        <div id="orders-list" class="orders-list" aria-live="polite"></div>
+      </section>
+
+      <div class="recent-orders">
+      <table>
+        <thead>
+          <tr>
+            <th>الحالة</th>
+            <th>الطاولة</th>
+            <th>الوجبات</th>
+            <th>التاريخ</th>
+            <th>المجموع</th>
+          </tr>
+        </thead>
+        <tbody id="recent-orders-body"></tbody>
+      </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const loggedIn = localStorage.getItem('loggedIn') === 'true';
+    if (!loggedIn) {
+      window.location.href = 'index.html';
+    }
+    const user = localStorage.getItem('username') || 'admin';
+    document.getElementById('welcome-user').textContent = user;
+
+    function readOrders() {
+      try {
+        const orders = JSON.parse(localStorage.getItem('restaurantOrders'));
+        return Array.isArray(orders) ? orders : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function renderOrders(orders = readOrders()) {
+      const list = document.getElementById('orders-list');
+      const pendingOrders = orders.filter((order) => !['done', 'completed', 'cancelled'].includes(order.status));
+      document.getElementById('new-order-count').textContent = pendingOrders.length;
+      list.replaceChildren();
+
+      if (pendingOrders.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'order-empty';
+        empty.textContent = 'لا توجد طلبات واردة حتى الآن.';
+        list.append(empty);
+        return;
+      }
+
+      pendingOrders.forEach((order) => {
+        const card = document.createElement('article');
+        card.className = 'order-item';
+        const header = document.createElement('div');
+        header.className = 'order-header';
+        const title = document.createElement('h3');
+        title.textContent = `طلب الطاولة رقم ${order.table}`;
+        const status = document.createElement('span');
+        status.className = 'pill yellow';
+        status.textContent = 'قيد الانتظار';
+        header.append(title, status);
+
+        const lines = document.createElement('p');
+        lines.className = 'order-lines';
+        lines.textContent = (order.items || []).map((item) => `${item.name} × ${item.quantity}`).join('، ');
+
+        const footer = document.createElement('div');
+        footer.className = 'order-footer';
+        const total = document.createElement('strong');
+        total.textContent = `المجموع: ${Number(order.total).toFixed(2)} ₪`;
+        const complete = document.createElement('button');
+        complete.className = 'order-button';
+        complete.type = 'button';
+        complete.textContent = 'تعليم كمكتمل';
+        complete.addEventListener('click', () => {
+          const updatedOrders = readOrders().map((savedOrder) => savedOrder.id === order.id
+            ? { ...savedOrder, status: 'done' }
+            : savedOrder);
+          localStorage.setItem('restaurantOrders', JSON.stringify(updatedOrders));
+          renderDashboard();
+        });
+        footer.append(total, complete);
+        card.append(header, lines, footer);
+        list.append(card);
+      });
+    }
+
+    function renderDashboard() {
+      const orders = readOrders();
+      const completed = orders.filter((order) => ['done', 'completed'].includes(order.status));
+      const pending = orders.filter((order) => !['done', 'completed', 'cancelled'].includes(order.status));
+      const cancelled = orders.filter((order) => order.status === 'cancelled');
+      const revenue = completed.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
+      let profit = 0;
+      let missingCosts = 0;
+
+      completed.forEach((order) => {
+        (order.items || []).forEach((item) => {
+          const quantity = Number(item.quantity) || 0;
+          const salePrice = Number(item.price);
+          if (!Number.isFinite(item.unitCost) || item.unitCost < 0 || !Number.isFinite(salePrice)) {
+            missingCosts += 1;
+            return;
+          }
+          profit += (salePrice - item.unitCost) * quantity;
+        });
+      });
+
+      document.getElementById('sales-total').textContent = `${revenue.toFixed(2)} ₪`;
+      document.getElementById('orders-total').textContent = orders.length;
+      document.getElementById('orders-breakdown').textContent = `${completed.length} مكتمل · ${pending.length} قيد الانتظار · ${cancelled.length} ملغي`;
+      document.getElementById('pending-total').textContent = pending.length;
+      document.getElementById('profit-total').textContent = missingCosts ? 'غير مكتمل' : `${profit.toFixed(2)} ₪`;
+      const profitNote = document.getElementById('profit-note');
+      profitNote.textContent = missingCosts ? `سجّل تكلفة التحضير لـ ${missingCosts} وجبة مكتملة لاحتساب الربح` : 'المبيعات ناقص تكلفة التحضير، قبل المصاريف العامة';
+      profitNote.classList.toggle('profit-warning', missingCosts > 0);
+
+      const recentOrders = orders.slice().sort((first, second) => Date.parse(second.createdAt || 0) - Date.parse(first.createdAt || 0)).slice(0, 5);
+      const tableBody = document.getElementById('recent-orders-body');
+      tableBody.replaceChildren();
+      if (recentOrders.length === 0) {
+        const row = document.createElement('tr');
+        const cell = document.createElement('td');
+        cell.colSpan = 5;
+        cell.textContent = 'ستظهر الطلبات هنا بعد إرسال أول طلب.';
+        row.append(cell);
+        tableBody.append(row);
+      } else {
+        recentOrders.forEach((order) => {
+          const row = document.createElement('tr');
+          const statusCell = document.createElement('td');
+          const status = document.createElement('span');
+          const isComplete = ['done', 'completed'].includes(order.status);
+          const isCancelled = order.status === 'cancelled';
+          status.className = `pill ${isComplete ? 'green' : isCancelled ? 'blue' : 'yellow'}`;
+          status.textContent = isComplete ? 'مكتمل' : isCancelled ? 'ملغي' : 'قيد الانتظار';
+          statusCell.append(status);
+          const tableCell = document.createElement('td');
+          tableCell.textContent = `رقم ${order.table}`;
+          const itemsCell = document.createElement('td');
+          itemsCell.textContent = (order.items || []).map((item) => `${item.name} × ${item.quantity}`).join('، ');
+          const dateCell = document.createElement('td');
+          dateCell.textContent = order.createdAt ? new Date(order.createdAt).toLocaleString('ar') : '—';
+          const totalCell = document.createElement('td');
+          totalCell.textContent = `${(Number(order.total) || 0).toFixed(2)} ₪`;
+          row.append(statusCell, tableCell, itemsCell, dateCell, totalCell);
+          tableBody.append(row);
+        });
+      }
+
+      renderOrders(orders);
+    }
+
+    renderDashboard();
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'restaurantOrders') renderDashboard();
+    });
+  </script>
+</body>
+</html>
